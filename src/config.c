@@ -13,21 +13,19 @@ static char *trim(char *text)
 
     while (isspace((unsigned char)*text))
         ++text;
-
     if (*text == '\0')
         return text;
 
     end = text + strlen(text) - 1;
     while (end > text && isspace((unsigned char)*end))
         --end;
-
     end[1] = '\0';
     return text;
 }
 
 static int parse_unsigned(const char *text, unsigned *result)
 {
-    char *end;
+    char *end = NULL;
     unsigned long value;
 
     if (text == NULL || *text == '\0' || *text == '-')
@@ -35,7 +33,6 @@ static int parse_unsigned(const char *text, unsigned *result)
 
     errno = 0;
     value = strtoul(text, &end, 10);
-
     if (errno != 0 || end == text || *end != '\0' || value > UINT_MAX)
         return -1;
 
@@ -43,23 +40,7 @@ static int parse_unsigned(const char *text, unsigned *result)
     return 0;
 }
 
-static int equipment_from_name(const char *name, EquipmentType *equipment)
-{
-    if (strcmp(name, "stove") == 0)
-        *equipment = EQUIPMENT_STOVE;
-    else if (strcmp(name, "oven") == 0)
-        *equipment = EQUIPMENT_OVEN;
-    else if (strcmp(name, "grill") == 0)
-        *equipment = EQUIPMENT_GRILL;
-    else if (strcmp(name, "table") == 0)
-        *equipment = EQUIPMENT_TABLE;
-    else
-        return -1;
-
-    return 0;
-}
-
-static const char *equipment_name(EquipmentType equipment)
+const char *config_equipment_name(EquipmentType equipment)
 {
     static const char *names[EQUIPMENT_TYPES] = {
         "stove", "oven", "grill", "table"
@@ -67,8 +48,20 @@ static const char *equipment_name(EquipmentType equipment)
 
     if ((unsigned)equipment >= EQUIPMENT_TYPES)
         return "unknown";
-
     return names[equipment];
+}
+
+static int equipment_from_name(const char *name, EquipmentType *equipment)
+{
+    unsigned i;
+
+    for (i = 0; i < EQUIPMENT_TYPES; ++i) {
+        if (strcmp(name, config_equipment_name((EquipmentType)i)) == 0) {
+            *equipment = (EquipmentType)i;
+            return 0;
+        }
+    }
+    return -1;
 }
 
 static int parse_dish(char *value, Config *config)
@@ -77,6 +70,7 @@ static int parse_dish(char *value, Config *config)
     char *name;
     char *operation_text;
     char *token;
+    DishSpec *dish;
 
     if (separator == NULL || config->menu_size >= MAX_DISHES)
         return -1;
@@ -84,14 +78,13 @@ static int parse_dish(char *value, Config *config)
     *separator = '\0';
     name = trim(value);
     operation_text = trim(separator + 1);
-
     if (*name == '\0' || strlen(name) >= MAX_NAME_LENGTH ||
         *operation_text == '\0')
         return -1;
 
-    DishSpec *dish = &config->menu[config->menu_size];
+    dish = &config->menu[config->menu_size];
     memset(dish, 0, sizeof(*dish));
-    strcpy(dish->name, name);
+    (void)snprintf(dish->name, sizeof(dish->name), "%s", name);
 
     token = strtok(operation_text, ",");
     while (token != NULL) {
@@ -100,6 +93,7 @@ static int parse_dish(char *value, Config *config)
         char *duration_text;
         EquipmentType equipment;
         unsigned duration;
+        OperationSpec *operation;
 
         if (colon == NULL || dish->operation_count >= MAX_STEPS_PER_DISH)
             return -1;
@@ -109,15 +103,12 @@ static int parse_dish(char *value, Config *config)
         duration_text = trim(colon + 1);
 
         if (equipment_from_name(equipment_text, &equipment) != 0 ||
-            parse_unsigned(duration_text, &duration) != 0 ||
-            duration == 0)
+            parse_unsigned(duration_text, &duration) != 0 || duration == 0)
             return -1;
 
-        OperationSpec *operation =
-            &dish->operations[dish->operation_count++];
+        operation = &dish->operations[dish->operation_count++];
         operation->equipment = equipment;
         operation->duration = duration;
-
         token = strtok(NULL, ",");
     }
 
@@ -153,7 +144,6 @@ static int parse_order(char *value, Config *config)
                 break;
             }
         }
-
         if (!found)
             return -1;
 
@@ -168,15 +158,37 @@ static int parse_order(char *value, Config *config)
     return 0;
 }
 
+static int parse_arrival_gaps(char *value, Config *config)
+{
+    char *token;
+    unsigned count = 0;
+
+    token = strtok(value, ",");
+    while (token != NULL) {
+        unsigned gap;
+        if (count >= MAX_VISITORS ||
+            parse_unsigned(trim(token), &gap) != 0)
+            return -1;
+        config->arrival_gaps[count++] = gap;
+        token = strtok(NULL, ",");
+    }
+
+    if (count == 0)
+        return -1;
+    config->arrival_gap_count = count;
+    return 0;
+}
+
 static int set_config_value(Config *config, char *key, char *value)
 {
     unsigned number;
 
     if (strcmp(key, "dish") == 0)
         return parse_dish(value, config);
-
     if (strcmp(key, "order") == 0)
         return parse_order(value, config);
+    if (strcmp(key, "arrival_intervals") == 0)
+        return parse_arrival_gaps(value, config);
 
     if (strcmp(key, "priority") == 0) {
         if (strcmp(value, "fifo") == 0)
@@ -205,6 +217,8 @@ static int set_config_value(Config *config, char *key, char *value)
         config->ready_queue_capacity = number;
     else if (strcmp(key, "dishes_per_order") == 0)
         config->dishes_per_order = number;
+    else if (strcmp(key, "seed") == 0)
+        config->seed = (uint32_t)number;
     else if (strcmp(key, "equipment_stove") == 0)
         config->equipment_count[EQUIPMENT_STOVE] = number;
     else if (strcmp(key, "equipment_oven") == 0)
@@ -222,7 +236,7 @@ static int set_config_value(Config *config, char *key, char *value)
 int config_load_file(const char *path, Config *config)
 {
     FILE *file;
-    char line[512];
+    char line[768];
     unsigned line_number = 0;
 
     if (path == NULL || config == NULL)
@@ -235,6 +249,8 @@ int config_load_file(const char *path, Config *config)
     }
 
     memset(config, 0, sizeof(*config));
+    config->priority = PRIORITY_FIFO;
+    config->seed = 42U;
 
     while (fgets(line, sizeof(line), file) != NULL) {
         char *text;
@@ -244,7 +260,6 @@ int config_load_file(const char *path, Config *config)
 
         ++line_number;
         text = trim(line);
-
         if (*text == '\0' || *text == '#')
             continue;
 
@@ -285,14 +300,17 @@ int config_validate(const Config *config)
     if (config == NULL ||
         (config->priority != PRIORITY_FIFO &&
          config->priority != PRIORITY_LIFO) ||
-        config->visitor_count == 0 ||
-        config->visitor_count > MAX_VISITORS ||
-        config->waiter_count == 0 ||
-        config->cook_count == 0 ||
-        config->arrival_interval == 0 ||
-        config->menu_size == 0 ||
-        config->menu_size > MAX_DISHES) {
+        config->visitor_count == 0 || config->visitor_count > MAX_VISITORS ||
+        config->waiter_count == 0 || config->cook_count == 0 ||
+        config->menu_size == 0 || config->menu_size > MAX_DISHES) {
         fprintf(stderr, "Invalid general configuration values\n");
+        return -1;
+    }
+
+    if (config->arrival_gap_count != 0 &&
+        config->arrival_gap_count != config->visitor_count) {
+        fprintf(stderr,
+                "arrival_intervals must contain exactly one value per visitor\n");
         return -1;
     }
 
@@ -304,24 +322,20 @@ int config_validate(const Config *config)
             return -1;
         }
     } else if (config->order_count != config->visitor_count) {
-        fprintf(stderr, "Provide exactly one order per visitor, or no order lines\n");
+        fprintf(stderr,
+                "Provide exactly one order per visitor, or no order lines\n");
         return -1;
     }
 
     for (i = 0; i < config->order_count; ++i) {
-        unsigned j;
-
         if (config->order_dish_count[i] == 0 ||
             config->order_dish_count[i] > MAX_DISHES_PER_ORDER) {
-            fprintf(stderr, "Invalid order for visitor %u\\n", i + 1);
+            fprintf(stderr, "Invalid order for visitor %u\n", i + 1);
             return -1;
         }
-
-
         for (j = 0; j < config->order_dish_count[i]; ++j) {
             if (config->order_dishes[i][j] >= config->menu_size) {
-                fprintf(stderr, "Invalid dish in order for visitor %u\\n",
-                        i + 1);
+                fprintf(stderr, "Invalid dish in order for visitor %u\n", i + 1);
                 return -1;
             }
         }
@@ -329,23 +343,16 @@ int config_validate(const Config *config)
 
     for (i = 0; i < config->menu_size; ++i) {
         const DishSpec *dish = &config->menu[i];
-
-        if (dish->name[0] == '\0' ||
-            dish->operation_count == 0 ||
+        if (dish->name[0] == '\0' || dish->operation_count == 0 ||
             dish->operation_count > MAX_STEPS_PER_DISH) {
             fprintf(stderr, "Invalid dish at menu index %u\n", i);
             return -1;
         }
-
         for (j = 0; j < dish->operation_count; ++j) {
             const OperationSpec *operation = &dish->operations[j];
-            unsigned equipment = (unsigned)operation->equipment;
-
-            if (equipment >= EQUIPMENT_TYPES ||
-                operation->duration == 0 ||
-                config->equipment_count[equipment] == 0) {
-                fprintf(stderr,
-                        "Dish '%s' uses invalid or unavailable equipment\n",
+            if ((unsigned)operation->equipment >= EQUIPMENT_TYPES ||
+                operation->duration == 0) {
+                fprintf(stderr, "Dish '%s' has an invalid operation\n",
                         dish->name);
                 return -1;
             }
@@ -359,10 +366,8 @@ static int read_line(const char *prompt, char *buffer, size_t size)
 {
     printf("%s", prompt);
     fflush(stdout);
-
     if (fgets(buffer, (int)size, stdin) == NULL)
         return -1;
-
     buffer[strcspn(buffer, "\n")] = '\0';
     return 0;
 }
@@ -370,13 +375,9 @@ static int read_line(const char *prompt, char *buffer, size_t size)
 static int read_number(const char *prompt, unsigned *value)
 {
     char buffer[128];
-    char *text;
-
     if (read_line(prompt, buffer, sizeof(buffer)) != 0)
         return -1;
-
-    text = trim(buffer);
-    return parse_unsigned(text, value);
+    return parse_unsigned(trim(buffer), value);
 }
 
 int config_read_interactive(Config *config)
@@ -384,17 +385,21 @@ int config_read_interactive(Config *config)
     unsigned i;
     unsigned j;
     unsigned choice;
-    char prompt[128];
+    char buffer[128];
+    char prompt[160];
 
     if (config == NULL)
         return -1;
 
     memset(config, 0, sizeof(*config));
+    config->priority = PRIORITY_FIFO;
+    config->seed = 42U;
 
     if (read_number("Number of visitors: ", &config->visitor_count) != 0 ||
         read_number("Number of waiters: ", &config->waiter_count) != 0 ||
         read_number("Number of cooks: ", &config->cook_count) != 0 ||
-        read_number("Arrival interval: ", &config->arrival_interval) != 0 ||
+        read_number("Constant arrival interval (0 allowed): ",
+                    &config->arrival_interval) != 0 ||
         read_number("Kitchen queue capacity (0 = unlimited): ",
                     &config->kitchen_queue_capacity) != 0 ||
         read_number("Ready-dish queue capacity (0 = unlimited): ",
@@ -404,13 +409,11 @@ int config_read_interactive(Config *config)
         return -1;
     }
 
-    if (read_line("Order priority (fifo/lifo): ",
-                  prompt, sizeof(prompt)) != 0)
+    if (read_line("Order priority (fifo/lifo): ", buffer, sizeof(buffer)) != 0)
         return -1;
-
-    if (strcmp(trim(prompt), "fifo") == 0)
+    if (strcmp(trim(buffer), "fifo") == 0)
         config->priority = PRIORITY_FIFO;
-    else if (strcmp(trim(prompt), "lifo") == 0)
+    else if (strcmp(trim(buffer), "lifo") == 0)
         config->priority = PRIORITY_LIFO;
     else {
         fprintf(stderr, "Priority must be fifo or lifo\n");
@@ -419,29 +422,28 @@ int config_read_interactive(Config *config)
 
     for (i = 0; i < EQUIPMENT_TYPES; ++i) {
         snprintf(prompt, sizeof(prompt), "Number of %s units: ",
-                 equipment_name((EquipmentType)i));
-        if (read_number(prompt, &config->equipment_count[i]) != 0) {
-            fprintf(stderr, "Invalid equipment count\n");
+                 config_equipment_name((EquipmentType)i));
+        if (read_number(prompt, &config->equipment_count[i]) != 0)
             return -1;
-        }
     }
 
     if (read_number("Number of dishes in menu: ", &config->menu_size) != 0 ||
-        config->menu_size > MAX_DISHES) {
-        fprintf(stderr, "Invalid menu size (maximum %d)\n", MAX_DISHES);
+        config->menu_size == 0 || config->menu_size > MAX_DISHES) {
+        fprintf(stderr, "Invalid menu size (1..%d)\n", MAX_DISHES);
         return -1;
     }
 
     for (i = 0; i < config->menu_size; ++i) {
         DishSpec *dish = &config->menu[i];
-
         snprintf(prompt, sizeof(prompt), "Name of dish %u: ", i + 1);
-        if (read_line(prompt, dish->name, sizeof(dish->name)) != 0)
+        if (read_line(prompt, dish->name, sizeof(dish->name)) != 0 ||
+            dish->name[0] == '\0')
             return -1;
 
         snprintf(prompt, sizeof(prompt),
                  "Number of operations for '%s': ", dish->name);
         if (read_number(prompt, &dish->operation_count) != 0 ||
+            dish->operation_count == 0 ||
             dish->operation_count > MAX_STEPS_PER_DISH) {
             fprintf(stderr, "Invalid operation count\n");
             return -1;
@@ -449,21 +451,40 @@ int config_read_interactive(Config *config)
 
         for (j = 0; j < dish->operation_count; ++j) {
             OperationSpec *operation = &dish->operations[j];
-
             printf("Operation %u equipment (1=stove, 2=oven, "
                    "3=grill, 4=table): ", j + 1);
             if (read_number("", &choice) != 0 || choice < 1 ||
-                choice > EQUIPMENT_TYPES) {
-                fprintf(stderr, "Invalid equipment choice\n");
+                choice > EQUIPMENT_TYPES)
                 return -1;
-            }
-
             operation->equipment = (EquipmentType)(choice - 1);
 
-            snprintf(prompt, sizeof(prompt),
-                     "Operation %u duration: ", j + 1);
-            if (read_number(prompt, &operation->duration) != 0)
+            snprintf(prompt, sizeof(prompt), "Operation %u duration: ", j + 1);
+            if (read_number(prompt, &operation->duration) != 0 ||
+                operation->duration == 0)
                 return -1;
+        }
+    }
+
+    if (config->visitor_count > MAX_VISITORS ||
+        config->dishes_per_order > MAX_DISHES_PER_ORDER)
+        return config_validate(config);
+
+    printf("\nMenu:\n");
+    for (i = 0; i < config->menu_size; ++i)
+        printf("  %u - %s\n", i + 1, config->menu[i].name);
+
+    config->order_count = config->visitor_count;
+    for (i = 0; i < config->visitor_count; ++i) {
+        config->order_dish_count[i] = config->dishes_per_order;
+        printf("Order for visitor %u:\n", i + 1);
+        for (j = 0; j < config->dishes_per_order; ++j) {
+            snprintf(prompt, sizeof(prompt), "  dish %u menu number: ", j + 1);
+            if (read_number(prompt, &choice) != 0 || choice == 0 ||
+                choice > config->menu_size) {
+                fprintf(stderr, "Invalid menu number\n");
+                return -1;
+            }
+            config->order_dishes[i][j] = choice - 1;
         }
     }
 

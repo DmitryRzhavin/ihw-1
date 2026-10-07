@@ -1,0 +1,129 @@
+[     0] Restaurant opened; sequential discrete-event simulation started
+[     0] Configuration: visitors=4, waiters=2, cooks=3, priority=FIFO, seed=42
+[     0] Visitor 1 arrived and formed order 1 with 2 dishes
+[     0] Waiter 1 accepted order 1 from visitor 1
+[     0] Coordinator created dish 'Soup' for order 1
+[     0] Coordinator created operation 1 (stove, 3 time units) for dish 'Soup', order 1
+[     0] Coordinator created operation 2 (table, 1 time unit) for dish 'Soup', order 1
+[     0] Coordinator queued operation 1 of dish 'Soup' for order 1
+[     0] Coordinator created dish 'Roast' for order 1
+[     0] Coordinator created operation 1 (oven, 4 time units) for dish 'Roast', order 1
+[     0] Coordinator created operation 2 (table, 1 time unit) for dish 'Roast', order 1
+[     0] Coordinator queued operation 1 of dish 'Roast' for order 1
+[     0] Cook 1 acquired stove and started operation 1 of dish 'Soup' for order 1 (finishes at t=3)
+[     0] Cook 2 acquired oven and started operation 1 of dish 'Roast' for order 1 (finishes at t=4)
+[     2] Visitor 2 arrived and formed order 2 with 2 dishes
+[     2] Waiter 2 accepted order 2 from visitor 2
+[     2] Coordinator created dish 'Roast' for order 2
+[     2] Coordinator created operation 1 (oven, 4 time units) for dish 'Roast', order 2
+[     2] Coordinator created operation 2 (table, 1 time unit) for dish 'Roast', order 2
+[     2] Coordinator queued operation 1 of dish 'Roast' for order 2
+[     2] Coordinator created dish 'Grilled fish' for order 2
+[     2] Coordinator created operation 1 (grill, 3 time units) for dish 'Grilled fish', order 2
+[     2] Coordinator created operation 2 (table, 2 time units) for dish 'Grilled fish', order 2
+[     2] Coordinator queued operation 1 of dish 'Grilled fish' for order 2
+[     2] Cook 3 acquired grill and started operation 1 of dish 'Grilled fish' for order 2 (finishes at t=5)
+[     3] Cook 1 finished operation 1 of dish 'Soup' for order 1 and released stove
+[     3] Coordinator queued operation 2 of dish 'Soup' for order 1
+[     3] Cook 1 acquired table and started operation 2 of dish 'Soup' for order 1 (finishes at t=4)
+[     4] Cook 1 finished operation 2 of dish 'Soup' for order 1 and released table
+[     4] Dish 'Soup' is ready for order 1
+[     4] Cook 2 finished operation 1 of dish 'Roast' for order 1 and released oven
+[     4] Coordinator queued operation 2 of dish 'Roast' for order 1
+[     4] Coordinator placed dish 'Soup' in ready area for order 1
+[     4] Waiter 1 collected dish 'Soup' for order 1
+[     4] Visitor 3 arrived and formed order 3 with 2 dishes
+[     4] Cook 1 acquired table and started operation 2 of dish 'Roast' for order 1 (finishes at t=5)
+[     4] Cook 2 acquired oven and started operation 1 of dish 'Roast' for order 2 (finishes at t=8)
+[     5] Cook 1 finished operation 2 of dish 'Roast' for order 1 and released table
+[     5] Dish 'Roast' is ready for order 1
+[     5] Cook 3 finished operation 1 of dish 'Grilled fish' for order 2 and released grill
+[     5] Coordinator queued operation 2 of dish 'Grilled fish' for order 2
+[     5] Coordinator placed dish 'Roast' in ready area for order 1
+[     5] Waiter 1 collected dish 'Roast' for order 1
+[     5] Waiter 1 assembled and delivered order 1 to visitor 1
+[     5] Waiter 1 accepted order 3 from visitor 3
+[     5] Coordinator created dish 'Grilled fish' for order 3
+[     5] Coordinator created operation 1 (grill, 3 time units) for dish 'Grilled fish', order 3
+[     5] Coordinator created operation 2 (table, 2 time units) for dish 'Grilled fish', order 3
+[     5] Coordinator queued operation 1 of dish 'Grilled fish' for order 3
+[     5] Coordinator created dish 'Soup' for order 3
+[     5] Coordinator created operation 1 (stove, 3 time units) for dish 'Soup', order 3
+[     5] Coordinator created operation 2 (table, 1 time unit) for dish 'Soup', order 3
+[     5] Coordinator queued operation 1 of dish 'Soup' for order 3
+[     5] Cook 1 acquired table and started operation 2 of dish 'Grilled fish' for order 2 (finishes at t=7)
+[     5] Cook 3 acquired grill and started operation 1 of dish 'Grilled fish' for order 3 (finishes at t=8)
+[     6] Visitor 4 arrived and formed order 4 with 2 dishes
+[     6] Order reception is closed: the last planned visitor has arrived
+[     7] Cook 1 finished operation 2 of dish 'Grilled fish' for order 2 and released table
+[     7] Dish 'Grilled fish' is ready for order 2
+[     7] Coordinator placed dish 'Grilled fish' in ready area for order 2
+[     7] Waiter 2 collected dish 'Grilled fish' for order 2
+[     7] Cook 1 acquired stove and started operation 1 of dish 'Soup' for order 3 (finishes at t=10)
+[     8] Cook 2 finished operation 1 of dish 'Roast' for order 2 and released oven
+[     8] Coordinator queued operation 2 of dish 'Roast' for order 2
+[     8] Cook 3 finished operation 1 of dish 'Grilled fish' for order 3 and released grill
+[     8] Coordinator queued operation 2 of dish 'Grilled fish' for order 3
+[     8] Cook 2 acquired table and started operation 2 of dish 'Roast' for order 2 (finishes at t=9)
+[     8] Cook 3 acquired table and started operation 2 of dish 'Grilled fish' for order 3 (finishes at t=10)
+[     9] Cook 2 finished operation 2 of dish 'Roast' for order 2 and released table
+[     9] Dish 'Roast' is ready for order 2
+[     9] Coordinator placed dish 'Roast' in ready area for order 2
+[     9] Waiter 2 collected dish 'Roast' for order 2
+[     9] Waiter 2 assembled and delivered order 2 to visitor 2
+[     9] Waiter 2 accepted order 4 from visitor 4
+[     9] Coordinator created dish 'Soup' for order 4
+[     9] Coordinator created operation 1 (stove, 3 time units) for dish 'Soup', order 4
+[     9] Coordinator created operation 2 (table, 1 time unit) for dish 'Soup', order 4
+[     9] Coordinator queued operation 1 of dish 'Soup' for order 4
+[     9] Coordinator created dish 'Roast' for order 4
+[     9] Coordinator created operation 1 (oven, 4 time units) for dish 'Roast', order 4
+[     9] Coordinator created operation 2 (table, 1 time unit) for dish 'Roast', order 4
+[     9] Coordinator queued operation 1 of dish 'Roast' for order 4
+[     9] Cook 2 acquired oven and started operation 1 of dish 'Roast' for order 4 (finishes at t=13)
+[    10] Cook 3 finished operation 2 of dish 'Grilled fish' for order 3 and released table
+[    10] Dish 'Grilled fish' is ready for order 3
+[    10] Cook 1 finished operation 1 of dish 'Soup' for order 3 and released stove
+[    10] Coordinator queued operation 2 of dish 'Soup' for order 3
+[    10] Coordinator placed dish 'Grilled fish' in ready area for order 3
+[    10] Waiter 1 collected dish 'Grilled fish' for order 3
+[    10] Cook 1 acquired table and started operation 2 of dish 'Soup' for order 3 (finishes at t=11)
+[    10] Cook 3 acquired stove and started operation 1 of dish 'Soup' for order 4 (finishes at t=13)
+[    11] Cook 1 finished operation 2 of dish 'Soup' for order 3 and released table
+[    11] Dish 'Soup' is ready for order 3
+[    11] Coordinator placed dish 'Soup' in ready area for order 3
+[    11] Waiter 1 collected dish 'Soup' for order 3
+[    11] Waiter 1 assembled and delivered order 3 to visitor 3
+[    13] Cook 3 finished operation 1 of dish 'Soup' for order 4 and released stove
+[    13] Coordinator queued operation 2 of dish 'Soup' for order 4
+[    13] Cook 2 finished operation 1 of dish 'Roast' for order 4 and released oven
+[    13] Coordinator queued operation 2 of dish 'Roast' for order 4
+[    13] Cook 1 acquired table and started operation 2 of dish 'Soup' for order 4 (finishes at t=14)
+[    13] Cook 2 acquired table and started operation 2 of dish 'Roast' for order 4 (finishes at t=14)
+[    14] Cook 1 finished operation 2 of dish 'Soup' for order 4 and released table
+[    14] Dish 'Soup' is ready for order 4
+[    14] Cook 2 finished operation 2 of dish 'Roast' for order 4 and released table
+[    14] Dish 'Roast' is ready for order 4
+[    14] Coordinator placed dish 'Soup' in ready area for order 4
+[    14] Coordinator placed dish 'Roast' in ready area for order 4
+[    14] Waiter 2 collected dish 'Soup' for order 4
+[    14] Waiter 2 collected dish 'Roast' for order 4
+[    14] Waiter 2 assembled and delivered order 4 to visitor 4
+[    14] Restaurant closed: delivered=4, canceled=0, total=4
+
+================ FINAL STATISTICS ================
+Termination: normal
+Model time: 14
+Visitors arrived: 4 / 4
+Orders accepted: 4
+Orders delivered: 4
+Orders canceled as impossible: 0
+Dishes created / ready: 8 / 8
+Operations created / started / completed: 16 / 16 / 16
+Average kitchen-queue wait: 0.31 model units
+Cook utilization: 88.10%
+stove utilization: 64.29% (units: 1)
+oven  utilization: 85.71% (units: 1)
+grill utilization: 42.86% (units: 1)
+table utilization: 35.71% (units: 2)
+==================================================
