@@ -178,6 +178,16 @@ static int set_config_value(Config *config, char *key, char *value)
     if (strcmp(key, "order") == 0)
         return parse_order(value, config);
 
+    if (strcmp(key, "priority") == 0) {
+        if (strcmp(value, "fifo") == 0)
+            config->priority = PRIORITY_FIFO;
+        else if (strcmp(value, "lifo") == 0)
+            config->priority = PRIORITY_LIFO;
+        else
+            return -1;
+        return 0;
+    }
+
     if (parse_unsigned(value, &number) != 0)
         return -1;
 
@@ -273,6 +283,8 @@ int config_validate(const Config *config)
     unsigned j;
 
     if (config == NULL ||
+        (config->priority != PRIORITY_FIFO &&
+         config->priority != PRIORITY_LIFO) ||
         config->visitor_count == 0 ||
         config->visitor_count > MAX_VISITORS ||
         config->waiter_count == 0 ||
@@ -389,6 +401,19 @@ int config_read_interactive(Config *config)
                     &config->ready_queue_capacity) != 0 ||
         read_number("Dishes in each order: ", &config->dishes_per_order) != 0) {
         fprintf(stderr, "Invalid numeric input\n");
+        return -1;
+    }
+
+    if (read_line("Order priority (fifo/lifo): ",
+                  prompt, sizeof(prompt)) != 0)
+        return -1;
+
+    if (strcmp(trim(prompt), "fifo") == 0)
+        config->priority = PRIORITY_FIFO;
+    else if (strcmp(trim(prompt), "lifo") == 0)
+        config->priority = PRIORITY_LIFO;
+    else {
+        fprintf(stderr, "Priority must be fifo or lifo\n");
         return -1;
     }
 

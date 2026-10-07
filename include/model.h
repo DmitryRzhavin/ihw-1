@@ -15,6 +15,11 @@ typedef enum {
     EQUIPMENT_TABLE
 } EquipmentType;
 
+typedef enum {
+    PRIORITY_FIFO = 0,
+    PRIORITY_LIFO
+} OrderPriority;
+
 typedef struct {
     EquipmentType equipment;
     unsigned duration;
@@ -36,6 +41,7 @@ typedef struct {
     /* Ноль означает неограниченную вместимость очереди. */
     unsigned kitchen_queue_capacity;
     unsigned ready_queue_capacity;
+    OrderPriority priority;
 
     unsigned dishes_per_order;
     unsigned menu_size;

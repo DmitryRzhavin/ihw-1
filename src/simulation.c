@@ -87,6 +87,7 @@ static int find_next_operation(const RuntimeOperation *operations,
                                const unsigned *equipment_busy,
                                const Config *config)
 {
+    int selected = -1;
     unsigned i;
 
     for (i = 0; i < operation_count; ++i) {
@@ -96,13 +97,21 @@ static int find_next_operation(const RuntimeOperation *operations,
             continue;
 
         equipment = (unsigned)operations[i].equipment;
-        if (equipment_busy[equipment] < config->equipment_count[equipment])
-            return (int)i;
+        if (equipment_busy[equipment] >= config->equipment_count[equipment])
+            continue;
 
-        /* Эта операция пока недоступна — проверяем следующие в очереди. */
+        if (selected < 0 ||
+            (config->priority == PRIORITY_FIFO &&
+             operations[i].order_id <
+                 operations[(unsigned)selected].order_id) ||
+            (config->priority == PRIORITY_LIFO &&
+             operations[i].order_id >
+                 operations[(unsigned)selected].order_id)) {
+            selected = (int)i;
+        }
     }
 
-    return -1;
+    return selected;
 }
 
 static unsigned queued_operation_count(const RuntimeOperation *operations,
@@ -158,15 +167,12 @@ static void promote_waiting_operations(RuntimeOperation *operations,
                                        const Config *config,
                                        uint64_t current_time)
 {
-    unsigned i;
-
-    for (i = 0; i < operation_count; ++i) {
-        RuntimeOperation *operation = &operations[i];
+    for (;;) {
+        int selected = -1;
+        unsigned i;
+        RuntimeOperation *operation;
         const RuntimeDish *dish;
         char message[256];
-
-        if (operation->state != OP_WAITING_CAPACITY)
-            continue;
 
         if (config->kitchen_queue_capacity != 0 &&
             queued_operation_count(operations, operation_count) >=
@@ -174,6 +180,25 @@ static void promote_waiting_operations(RuntimeOperation *operations,
             return;
         }
 
+        for (i = 0; i < operation_count; ++i) {
+            if (operations[i].state != OP_WAITING_CAPACITY)
+                continue;
+
+            if (selected < 0 ||
+                (config->priority == PRIORITY_FIFO &&
+                 operations[i].order_id <
+                     operations[(unsigned)selected].order_id) ||
+                (config->priority == PRIORITY_LIFO &&
+                 operations[i].order_id >
+                     operations[(unsigned)selected].order_id)) {
+                selected = (int)i;
+            }
+        }
+
+        if (selected < 0)
+            return;
+
+        operation = &operations[(unsigned)selected];
         operation->state = OP_QUEUED;
         dish = &orders[operation->order_id - 1]
                     .dishes[operation->dish_number - 1];
