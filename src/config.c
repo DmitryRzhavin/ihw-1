@@ -279,17 +279,20 @@ int config_validate(const Config *config)
         config->cook_count == 0 ||
         config->arrival_interval == 0 ||
         config->menu_size == 0 ||
-        config->menu_size > MAX_DISHES ||
-        config->dishes_per_order == 0 ||
-        config->dishes_per_order > MAX_DISHES_PER_ORDER ||
-        config->dishes_per_order > config->menu_size) {
+        config->menu_size > MAX_DISHES) {
         fprintf(stderr, "Invalid general configuration values\n");
         return -1;
     }
 
-    if (config->order_count != 0 &&
-        config->order_count != config->visitor_count) {
-        fprintf(stderr, "Provide exactly one order per visitor, or no order lines\\n");
+    if (config->order_count == 0) {
+        if (config->dishes_per_order == 0 ||
+            config->dishes_per_order > MAX_DISHES_PER_ORDER ||
+            config->dishes_per_order > config->menu_size) {
+            fprintf(stderr, "Invalid dishes_per_order value\n");
+            return -1;
+        }
+    } else if (config->order_count != config->visitor_count) {
+        fprintf(stderr, "Provide exactly one order per visitor, or no order lines\n");
         return -1;
     }
 
@@ -302,14 +305,6 @@ int config_validate(const Config *config)
             return -1;
         }
 
-        if (config->order_dish_count[i] != config->dishes_per_order) {
-            fprintf(stderr,
-                    "Order for visitor %u has %u dishes; expected %u\n",
-                    i + 1,
-                    config->order_dish_count[i],
-                    config->dishes_per_order);
-            return -1;
-        }
 
         for (j = 0; j < config->order_dish_count[i]; ++j) {
             if (config->order_dishes[i][j] >= config->menu_size) {
