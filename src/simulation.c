@@ -99,7 +99,7 @@ static int find_next_operation(const RuntimeOperation *operations,
         if (equipment_busy[equipment] < config->equipment_count[equipment])
             return (int)i;
 
-        return -1;
+        /* Эта операция пока недоступна — проверяем следующие в очереди. */
     }
 
     return -1;

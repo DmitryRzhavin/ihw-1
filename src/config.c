@@ -302,6 +302,15 @@ int config_validate(const Config *config)
             return -1;
         }
 
+        if (config->order_dish_count[i] != config->dishes_per_order) {
+            fprintf(stderr,
+                    "Order for visitor %u has %u dishes; expected %u\n",
+                    i + 1,
+                    config->order_dish_count[i],
+                    config->dishes_per_order);
+            return -1;
+        }
+
         for (j = 0; j < config->order_dish_count[i]; ++j) {
             if (config->order_dishes[i][j] >= config->menu_size) {
                 fprintf(stderr, "Invalid dish in order for visitor %u\\n",
